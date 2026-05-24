@@ -110,3 +110,365 @@ This project performs end-to-end exploratory data analysis (EDA) on a retail sto
 ---
 
 ## 📄 Project Structure
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.gridspec import GridSpec
+import matplotlib.ticker as mticker
+import warnings
+warnings.filterwarnings('ignore')
+
+# ─────────────────────────────────────────
+#  COLOR PALETTE
+# ─────────────────────────────────────────
+PRIMARY   = '#1A73E8'
+SECONDARY = '#34A853'
+ACCENT    = '#FBBC04'
+DANGER    = '#EA4335'
+PURPLE    = '#9C27B0'
+TEAL      = '#00BCD4'
+BG        = '#F8F9FA'
+DARK      = '#1E2D3D'
+
+plt.rcParams.update({
+    'font.family'      : 'DejaVu Sans',
+    'axes.facecolor'   : BG,
+    'figure.facecolor' : 'white',
+    'axes.spines.top'  : False,
+    'axes.spines.right': False,
+    'axes.grid'        : True,
+    'grid.alpha'       : 0.3,
+    'grid.linestyle'   : '--',
+})
+
+# ─────────────────────────────────────────
+#  DATA
+# ─────────────────────────────────────────
+
+# Chart 1 — Monthly Revenue
+months      = ['Jan','Feb','Mar','Apr','May','Jun',
+               'Jul','Aug','Sep','Oct','Nov','Dec']
+revenue     = [8.42, 7.56, 9.18, 10.24, 11.38, 10.42,
+               9.87, 12.05, 13.18, 16.52, 18.89, 21.54]
+mom_growth  = [None, -10.2, 21.4, 11.5, 11.1, -8.4,
+               -5.3,  22.1,  9.4, 25.3, 14.3, 14.0]
+
+# Chart 2 — Revenue by Product Category
+categories  = ['Electronics','Clothing','Kitchen','Footwear','Sports','Books']
+cat_revenue = [48.33, 36.14, 24.89, 21.03, 18.77, 9.41]
+cat_colors  = [PRIMARY, SECONDARY, ACCENT, PURPLE, TEAL, DANGER]
+
+# Chart 3 — Payment Method
+pay_methods = ['Card', 'Cash', 'UPI', 'Net Banking']
+pay_revenue = [82.34, 54.91, 38.42, 8.58]
+pay_pct     = [44.7, 29.8, 20.9, 4.7]
+pay_colors  = [PRIMARY, SECONDARY, ACCENT, PURPLE]
+
+# Chart 9 — Quarterly
+quarters    = ['Q1\n(Jan–Mar)', 'Q2\n(Apr–Jun)',
+               'Q3\n(Jul–Sep)', 'Q4\n(Oct–Dec)']
+q_revenue   = [25.16, 32.04, 35.10, 56.95]
+q_growth    = [27.4, 9.6, 62.2]
+q_colors    = [TEAL, ACCENT, SECONDARY, PRIMARY]
+
+# Chart 10 — Executive Dashboard H1 vs H2
+h1 = [8.42, 7.56, 9.18, 10.24, 11.38, 10.42]
+h2 = [16.52, 18.89, 21.54, 12.05, 13.18, 9.87]
+pair_labels = ['Jan/Jul','Feb/Aug','Mar/Sep',
+               'Apr/Oct','May/Nov','Jun/Dec']
+
+
+# ═══════════════════════════════════════════════════════
+#  CHART 1 — Monthly Revenue Trend
+# ═══════════════════════════════════════════════════════
+def chart1_monthly_revenue():
+    fig, ax = plt.subplots(figsize=(13, 6))
+    fig.patch.set_facecolor('white')
+
+    x = np.arange(len(months))
+
+    # Festive season shading (Oct–Dec = index 9–11)
+    ax.axvspan(8.5, 11.5, alpha=0.12, color=ACCENT, label='Festive Season (Oct–Dec)')
+
+    # Line + fill
+    ax.fill_between(x, revenue, alpha=0.12, color=PRIMARY)
+    ax.plot(x, revenue, color=PRIMARY, linewidth=2.8, zorder=3)
+    ax.scatter(x, revenue, color=PRIMARY, s=70, zorder=4, edgecolors='white', linewidth=1.5)
+
+    # Data labels
+    for i, (xi, yi) in enumerate(zip(x, revenue)):
+        ax.annotate(f'₹{yi}L', xy=(xi, yi),
+                    xytext=(0, 10), textcoords='offset points',
+                    ha='center', fontsize=8.5, fontweight='bold', color=DARK)
+
+    # MoM growth annotations
+    for i in range(1, len(months)):
+        color = SECONDARY if mom_growth[i] > 0 else DANGER
+        ax.annotate(f'{mom_growth[i]:+.1f}%',
+                    xy=(x[i], revenue[i]),
+                    xytext=(0, -18), textcoords='offset points',
+                    ha='center', fontsize=7.5, color=color, fontweight='bold')
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(months, fontsize=10)
+    ax.set_ylabel('Revenue (₹ Lakhs)', fontsize=11)
+    ax.set_title('Monthly Revenue Trend — FY 2024',
+                 fontsize=15, fontweight='bold', pad=18, color=DARK)
+    ax.set_ylim(0, 26)
+    ax.yaxis.set_major_formatter(mticker.FormatStrFormatter('₹%.0fL'))
+
+    festive_patch = mpatches.Patch(color=ACCENT, alpha=0.4, label='Festive Season (Oct–Dec)')
+    ax.legend(handles=[festive_patch], loc='upper left', fontsize=9)
+
+    plt.tight_layout()
+    plt.savefig('/mnt/user-data/outputs/chart1_monthly_revenue.png', dpi=150, bbox_inches='tight')
+    print("✅ Chart 1 saved.")
+    plt.show()
+
+
+# ═══════════════════════════════════════════════════════
+#  CHART 2 — Revenue by Product Category
+# ═══════════════════════════════════════════════════════
+def chart2_category_revenue():
+    fig, ax = plt.subplots(figsize=(11, 6))
+    fig.patch.set_facecolor('white')
+
+    x    = np.arange(len(categories))
+    bars = ax.bar(x, cat_revenue, color=cat_colors, width=0.55,
+                  edgecolor='white', linewidth=1.2, zorder=3)
+
+    # Value + % labels on bars
+    pct_share = [30.5, 22.8, 15.7, 13.3, 11.8, 5.9]
+    for bar, val, pct in zip(bars, cat_revenue, pct_share):
+        ax.text(bar.get_x() + bar.get_width()/2,
+                bar.get_height() + 0.6,
+                f'₹{val}L', ha='center', va='bottom',
+                fontsize=10, fontweight='bold', color=DARK)
+        ax.text(bar.get_x() + bar.get_width()/2,
+                bar.get_height()/2,
+                f'{pct}%', ha='center', va='center',
+                fontsize=9, fontweight='bold', color='white')
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(categories, fontsize=11)
+    ax.set_ylabel('Revenue (₹ Lakhs)', fontsize=11)
+    ax.set_title('Revenue by Product Category — FY 2024',
+                 fontsize=15, fontweight='bold', pad=18, color=DARK)
+    ax.set_ylim(0, 56)
+    ax.yaxis.set_major_formatter(mticker.FormatStrFormatter('₹%.0fL'))
+
+    plt.tight_layout()
+    plt.savefig('/mnt/user-data/outputs/chart2_category_revenue.png', dpi=150, bbox_inches='tight')
+    print("✅ Chart 2 saved.")
+    plt.show()
+
+
+# ═══════════════════════════════════════════════════════
+#  CHART 3 — Payment Method Distribution
+# ═══════════════════════════════════════════════════════
+def chart3_payment_methods():
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 6))
+    fig.patch.set_facecolor('white')
+
+    # --- Pie Chart ---
+    explode = (0.04, 0.02, 0.02, 0.06)
+    wedges, texts, autotexts = ax1.pie(
+        pay_pct, labels=pay_methods, colors=pay_colors,
+        autopct='%1.1f%%', startangle=140, explode=explode,
+        pctdistance=0.75, wedgeprops=dict(edgecolor='white', linewidth=2)
+    )
+    for at in autotexts:
+        at.set_fontsize(10)
+        at.set_fontweight('bold')
+        at.set_color('white')
+    for t in texts:
+        t.set_fontsize(11)
+
+    ax1.set_title('Payment Method Share (%)',
+                  fontsize=13, fontweight='bold', color=DARK, pad=14)
+
+    # --- Bar Chart ---
+    x    = np.arange(len(pay_methods))
+    bars = ax2.bar(x, pay_revenue, color=pay_colors, width=0.5,
+                   edgecolor='white', linewidth=1.2, zorder=3)
+
+    for bar, val, pct in zip(bars, pay_revenue, pay_pct):
+        ax2.text(bar.get_x() + bar.get_width()/2,
+                 bar.get_height() + 1,
+                 f'₹{val}L', ha='center', fontsize=10,
+                 fontweight='bold', color=DARK)
+        ax2.text(bar.get_x() + bar.get_width()/2,
+                 bar.get_height()/2,
+                 f'{pct}%', ha='center', va='center',
+                 fontsize=9, fontweight='bold', color='white')
+
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(pay_methods, fontsize=11)
+    ax2.set_ylabel('Revenue (₹ Lakhs)', fontsize=11)
+    ax2.set_title('Revenue by Payment Method',
+                  fontsize=13, fontweight='bold', color=DARK, pad=14)
+    ax2.set_ylim(0, 100)
+    ax2.yaxis.set_major_formatter(mticker.FormatStrFormatter('₹%.0fL'))
+
+    fig.suptitle('Payment Method Distribution — FY 2024',
+                 fontsize=15, fontweight='bold', color=DARK, y=1.02)
+
+    plt.tight_layout()
+    plt.savefig('/mnt/user-data/outputs/chart3_payment_methods.png', dpi=150, bbox_inches='tight')
+    print("✅ Chart 3 saved.")
+    plt.show()
+
+
+# ═══════════════════════════════════════════════════════
+#  CHART 9 — Quarterly Revenue & Growth
+# ═══════════════════════════════════════════════════════
+def chart9_quarterly():
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 6))
+    fig.patch.set_facecolor('white')
+
+    # --- Left: Quarterly Revenue Bars ---
+    x    = np.arange(len(quarters))
+    bars = ax1.bar(x, q_revenue, color=q_colors, width=0.5,
+                   edgecolor='white', linewidth=1.5, zorder=3)
+
+    pct_annual = [13.7, 17.4, 19.0, 30.9]
+    for bar, val, pct in zip(bars, q_revenue, pct_annual):
+        ax1.text(bar.get_x() + bar.get_width()/2,
+                 bar.get_height() + 0.8,
+                 f'₹{val}L', ha='center', fontsize=11,
+                 fontweight='bold', color=DARK)
+        ax1.text(bar.get_x() + bar.get_width()/2,
+                 bar.get_height()/2,
+                 f'{pct}%\nof Annual', ha='center', va='center',
+                 fontsize=8.5, fontweight='bold', color='white')
+
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(quarters, fontsize=10)
+    ax1.set_ylabel('Revenue (₹ Lakhs)', fontsize=11)
+    ax1.set_title('Quarterly Revenue Comparison',
+                  fontsize=13, fontweight='bold', color=DARK, pad=14)
+    ax1.set_ylim(0, 68)
+    ax1.yaxis.set_major_formatter(mticker.FormatStrFormatter('₹%.0fL'))
+
+    # --- Right: QoQ Growth Bars ---
+    growth_labels = ['Q1→Q2', 'Q2→Q3', 'Q3→Q4']
+    growth_colors = [SECONDARY if g > 0 else DANGER for g in q_growth]
+    x2   = np.arange(len(growth_labels))
+    bars2 = ax2.bar(x2, q_growth, color=growth_colors, width=0.45,
+                    edgecolor='white', linewidth=1.5, zorder=3)
+
+    for bar, val in zip(bars2, q_growth):
+        ax2.text(bar.get_x() + bar.get_width()/2,
+                 bar.get_height() + 0.8,
+                 f'+{val}%', ha='center', fontsize=12,
+                 fontweight='bold', color=DARK)
+
+    ax2.set_xticks(x2)
+    ax2.set_xticklabels(growth_labels, fontsize=11)
+    ax2.set_ylabel('Growth Rate (%)', fontsize=11)
+    ax2.set_title('Quarter-over-Quarter Growth %',
+                  fontsize=13, fontweight='bold', color=DARK, pad=14)
+    ax2.set_ylim(0, 75)
+    ax2.yaxis.set_major_formatter(mticker.FormatStrFormatter('+%.1f%%'))
+
+    fig.suptitle('Quarterly Revenue & Growth Analysis — FY 2024',
+                 fontsize=15, fontweight='bold', color=DARK, y=1.02)
+
+    plt.tight_layout()
+    plt.savefig('/mnt/user-data/outputs/chart9_quarterly.png', dpi=150, bbox_inches='tight')
+    print("✅ Chart 9 saved.")
+    plt.show()
+
+
+# ═══════════════════════════════════════════════════════
+#  CHART 10 — Executive Summary Dashboard
+# ═══════════════════════════════════════════════════════
+def chart10_executive_dashboard():
+    fig = plt.figure(figsize=(16, 10))
+    fig.patch.set_facecolor('white')
+    gs  = GridSpec(2, 3, figure=fig, hspace=0.45, wspace=0.35)
+
+    # ── KPI Donut 1: Electronics Share ──
+    ax1 = fig.add_subplot(gs[0, 0])
+    vals = [30.5, 69.5]
+    ax1.pie(vals, colors=[PRIMARY, '#E0E0E0'], startangle=90,
+            wedgeprops=dict(width=0.38, edgecolor='white'))
+    ax1.text(0, 0,  '30%',   ha='center', va='center',
+             fontsize=22, fontweight='bold', color=PRIMARY)
+    ax1.text(0, -0.55, 'Electronics Share',
+             ha='center', fontsize=11, color=DARK, fontweight='bold')
+    ax1.set_title('Category KPI', fontsize=11, color='grey', pad=6)
+
+    # ── KPI Donut 2: Digital Payments ──
+    ax2 = fig.add_subplot(gs[0, 1])
+    vals2 = [65.6, 34.4]
+    ax2.pie(vals2, colors=[SECONDARY, '#E0E0E0'], startangle=90,
+            wedgeprops=dict(width=0.38, edgecolor='white'))
+    ax2.text(0, 0,  '66%',   ha='center', va='center',
+             fontsize=22, fontweight='bold', color=SECONDARY)
+    ax2.text(0, -0.55, 'Digital Payments',
+             ha='center', fontsize=11, color=DARK, fontweight='bold')
+    ax2.set_title('Payment KPI', fontsize=11, color='grey', pad=6)
+
+    # ── KPI Donut 3: North Region Share ──
+    ax3 = fig.add_subplot(gs[0, 2])
+    vals3 = [28.3, 71.7]
+    ax3.pie(vals3, colors=[ACCENT, '#E0E0E0'], startangle=90,
+            wedgeprops=dict(width=0.38, edgecolor='white'))
+    ax3.text(0, 0,  '28%',   ha='center', va='center',
+             fontsize=22, fontweight='bold', color='#B8860B')
+    ax3.text(0, -0.55, 'North Region Share',
+             ha='center', fontsize=11, color=DARK, fontweight='bold')
+    ax3.set_title('Regional KPI', fontsize=11, color='grey', pad=6)
+
+    # ── H1 vs H2 Comparison Bar Chart ──
+    ax4 = fig.add_subplot(gs[1, :])
+    x   = np.arange(len(pair_labels))
+    w   = 0.35
+    b1  = ax4.bar(x - w/2, h1, width=w, label='H1 2024',
+                  color=PRIMARY,   alpha=0.85, edgecolor='white', zorder=3)
+    b2  = ax4.bar(x + w/2, h2, width=w, label='H2 2024',
+                  color=SECONDARY, alpha=0.85, edgecolor='white', zorder=3)
+
+    for bar in b1:
+        ax4.text(bar.get_x() + bar.get_width()/2,
+                 bar.get_height() + 0.3,
+                 f'₹{bar.get_height():.2f}L',
+                 ha='center', fontsize=8, color=DARK, fontweight='bold')
+    for bar in b2:
+        ax4.text(bar.get_x() + bar.get_width()/2,
+                 bar.get_height() + 0.3,
+                 f'₹{bar.get_height():.2f}L',
+                 ha='center', fontsize=8, color=DARK, fontweight='bold')
+
+    ax4.set_xticks(x)
+    ax4.set_xticklabels(pair_labels, fontsize=10)
+    ax4.set_ylabel('Revenue (₹ Lakhs)', fontsize=11)
+    ax4.set_title('H1 vs H2 Monthly Revenue Comparison (₹ Lakhs)',
+                  fontsize=13, fontweight='bold', color=DARK, pad=10)
+    ax4.legend(fontsize=10, loc='upper left')
+    ax4.set_ylim(0, 27)
+    ax4.yaxis.set_major_formatter(mticker.FormatStrFormatter('₹%.0fL'))
+
+    fig.suptitle('Executive Summary Dashboard — FY 2024',
+                 fontsize=17, fontweight='bold', color=DARK, y=1.01)
+
+    plt.savefig('/mnt/user-data/outputs/chart10_executive_dashboard.png',
+                dpi=150, bbox_inches='tight')
+    print("✅ Chart 10 saved.")
+    plt.show()
+
+
+# ═══════════════════════════════════════════════════════
+#  RUN ALL CHARTS
+# ═══════════════════════════════════════════════════════
+if __name__ == '__main__':
+    print("🚀 Generating charts...\n")
+    chart1_monthly_revenue()
+    chart2_category_revenue()
+    chart3_payment_methods()
+    chart9_quarterly()
+    chart10_executive_dashboard()
+    print("\n✅ All 5 charts generated successfully!")
+
